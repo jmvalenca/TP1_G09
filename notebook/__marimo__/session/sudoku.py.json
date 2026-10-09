@@ -1,0 +1,263 @@
+{
+  "version": "1",
+  "metadata": {
+    "marimo_version": "0.24.0",
+    "script_metadata_hash": "2234032dc616ad82d42f3130c7c7c97a"
+  },
+  "cells": [
+    {
+      "id": "Hbol",
+      "code_hash": "f340592928f0097fc40f5e94fdc63d50",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "MJUe",
+      "code_hash": "37ed62daa5c745a5d3ed5d8f45b4bd90",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"ideia-central\">Ideia central</h2>\n<span class=\"paragraph\">No Sudoku a regra \u00e9 sempre a mesma: <em>um conjunto de c\u00e9lulas tem de ter valores todos\ndiferentes</em>. Linhas, colunas e blocos s\u00f3 diferem em <strong>que c\u00e9lulas</strong> pertencem ao conjunto.\nPor isso toda a solu\u00e7\u00e3o assenta numa \u00fanica abstra\u00e7\u00e3o, o grupo de c\u00e9lulas (<code>box</code>), a partir da\nqual tudo o resto se constr\u00f3i:</span>\n<table>\n<thead>\n<tr>\n<th>Elemento</th>\n<th>Papel</th>\n<th>Requisito</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><code>box</code></td>\n<td>grupo gen\u00e9rico de c\u00e9lulas, algumas possivelmente fixas</td>\n<td>R1</td>\n</tr>\n<tr>\n<td><code>cube</code></td>\n<td><code>box</code> que representa um bloco <marimo-tex class=\"arithmatex\">||(n \\times n||)</marimo-tex></td>\n<td>R2</td>\n</tr>\n<tr>\n<td><code>path</code></td>\n<td><code>box</code> que representa um tro\u00e7o reto (linha ou coluna)</td>\n<td>R3</td>\n</tr>\n<tr>\n<td><code>gerar_pistas_aleatorias</code></td>\n<td>devolve um <code>box</code> com <marimo-tex class=\"arithmatex\">||(k||)</marimo-tex> c\u00e9lulas fixas</td>\n<td>R4</td>\n</tr>\n<tr>\n<td><code>SudokuCSP</code></td>\n<td>modelo CP-SAT; recebe grupos sem saber a sua origem</td>\n<td>R5</td>\n</tr>\n<tr>\n<td><code>resolver_sudoku</code></td>\n<td>monta linhas + colunas + blocos + pistas e resolve</td>\n<td>R6</td>\n</tr>\n<tr>\n<td><code>validar_solucao</code></td>\n<td>verifica\u00e7\u00e3o independente do solver</td>\n<td>testes</td>\n</tr>\n</tbody>\n</table>\n<span class=\"paragraph\">O modelo CSP <strong>n\u00e3o sabe o que \u00e9 uma linha, uma coluna ou um bloco</strong>: s\u00f3 recebe grupos. \u00c9 isto\nque permite acrescentar variantes (diagonais, regi\u00f5es irregulares) sem tocar no modelo.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "vblA",
+      "code_hash": "8cf593104ef80bf0c695940ada5a7b56",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"decisoes-de-modelacao-e-justificacao\">Decis\u00f5es de modela\u00e7\u00e3o e justifica\u00e7\u00e3o</h2>\n<span class=\"paragraph\"><strong>Solver: CP-SAT do OR-Tools.</strong> A regra \"c\u00e9lulas todas diferentes\" corresponde diretamente \u00e0\nrestri\u00e7\u00e3o global <code>AllDifferent</code>, que o CP-SAT trata com propaga\u00e7\u00e3o mais forte do que um conjunto\nde desigualdades <code>!=</code> par a par. O c\u00f3digo limita-se a <em>descrever</em> o problema e o solver faz a\npesquisa, o que \u00e9 mais curto, mais leg\u00edvel e escala melhor do que um backtracking escrito \u00e0 m\u00e3o.</span>\n<span class=\"paragraph\"><strong>Estrutura interna do <code>box</code>: dicion\u00e1rio.</strong> Guardamos <code>{(linha, coluna): valor ou None}</code>. S\u00f3\nocupa espa\u00e7o para as c\u00e9lulas que pertencem ao grupo (uma linha tem <marimo-tex class=\"arithmatex\">||(n^2||)</marimo-tex> entradas e n\u00e3o <marimo-tex class=\"arithmatex\">||(n^4||)</marimo-tex>)\ne a matriz <marimo-tex class=\"arithmatex\">||(n^2 \\times n^2||)</marimo-tex> s\u00f3 \u00e9 constru\u00edda quando \u00e9 pedida (<code>as_matrix</code>).</span>\n<span class=\"paragraph\"><strong>Apresenta\u00e7\u00e3o: texto simples.</strong> A grelha \u00e9 impressa com <code>.</code> nas c\u00e9lulas vazias. \u00c9 suficiente\npara ler o resultado e n\u00e3o acrescenta depend\u00eancias.</span>\n<span class=\"paragraph\"><strong>Pistas como grupo pr\u00f3prio, mas sem <code>AllDifferent</code>.</strong> Um grupo de pistas \u00e9 um <code>box</code> como os\noutros e chega ao modelo como tal (R6: \"linhas, colunas, blocos e pistas\"). H\u00e1 por\u00e9m um detalhe\nimportante: as pistas s\u00e3o <marimo-tex class=\"arithmatex\">||(k||)</marimo-tex> c\u00e9lulas espalhadas pela grelha, escolhidas ao acaso, e <strong>n\u00e3o\nt\u00eam de ser diferentes entre si</strong> (o mesmo d\u00edgito pode aparecer em duas linhas, colunas e blocos\ndiferentes). Se o modelo lhes impusesse <code>AllDifferent</code>, exigiria-se algo que o Sudoku n\u00e3o exige e\npuzzles perfeitamente v\u00e1lidos passariam a ser imposs\u00edveis. Por isso <code>add_group</code> tem o par\u00e2metro\n<code>todos_diferentes</code> e <code>add_clues</code> fixa os valores <strong>sem</strong> impor a diferen\u00e7a. Um dos testes mais\nabaixo mostra um caso concreto em que as duas leituras d\u00e3o resultados diferentes.</span>\n<span class=\"paragraph\"><strong>Pistas sem solu\u00e7\u00e3o.</strong> Os valores das pistas s\u00e3o aleat\u00f3rios em <marimo-tex class=\"arithmatex\">||([1, n^2]||)</marimo-tex> e <marimo-tex class=\"arithmatex\">||(k = n||)</marimo-tex> por omiss\u00e3o,\npor isso duas pistas podem contradizer-se (por exemplo, o mesmo d\u00edgito duas vezes na mesma linha).\nDecidimos <strong>tentar novas pistas</strong> at\u00e9 um m\u00e1ximo de tentativas; se nenhuma tiver solu\u00e7\u00e3o,\ndevolve-se <code>None</code> em vez de entrar num ciclo infinito. Escolhemos tentar de novo porque o\nobjetivo \u00e9 obter um puzzle resolvido, e o limite garante que o programa termina sempre.</span>\n<span class=\"paragraph\"><strong>Aleatoriedade control\u00e1vel.</strong> As fun\u00e7\u00f5es que sorteiam recebem opcionalmente um gerador\n<code>random.Random</code>. Assim os testes usam uma semente fixa e d\u00e3o sempre o mesmo resultado, sem\nmexer no estado global do m\u00f3dulo <code>random</code>.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "bkHC",
+      "code_hash": "8f4d0c660ad4d186874c9624c151d4a1",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "lEQa",
+      "code_hash": "1367e417da2f66626c6060aa493dcfa1",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"r1-box-grupo-generico-de-celulas\">R1 \u2014 <code>box</code>: grupo gen\u00e9rico de c\u00e9lulas</h2>\n<span class=\"paragraph\">O <code>box</code> representa <strong>qualquer</strong> conjunto de c\u00e9lulas ao qual se aplica \"todos diferentes\", com\nalgumas c\u00e9lulas possivelmente j\u00e1 fixas. N\u00e3o sabe nada de linhas, colunas, blocos ou Sudoku.</span>\n<ul>\n<li><code>add(linha, coluna, valor=None)</code> acrescenta uma c\u00e9lula e <strong>rejeita</strong> (<code>ValueError</code>) coordenadas\n  fora da grelha, valores fora de <marimo-tex class=\"arithmatex\">||([1, n^2]||)</marimo-tex> e argumentos que n\u00e3o sejam inteiros.</li>\n<li>O construtor aceita opcionalmente um dicion\u00e1rio inicial e reutiliza <code>add</code>, por isso a valida\u00e7\u00e3o\n  \u00e9 a mesma e n\u00e3o h\u00e1 maneira de criar um <code>box</code> inv\u00e1lido.</li>\n<li><code>n</code> \u00e9 obrigat\u00f3rio porque \u00e9 ele que define os limites da grelha usados na valida\u00e7\u00e3o.</li>\n<li><code>as_matrix()</code> devolve a matriz <marimo-tex class=\"arithmatex\">||(n^2 \\times n^2||)</marimo-tex> com o valor das c\u00e9lulas fixas e <code>0</code> nas restantes.</li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "PKri",
+      "code_hash": "5eda373080b323ee9275e759c1bdb2a9",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "Xref",
+      "code_hash": "fb50973eba95b48cae4b07e24289b384",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"r2-e-r3-cube-e-path-duas-formas-concretas-de-grupo\">R2 e R3 \u2014 <code>cube</code> e <code>path</code>: duas formas concretas de grupo</h2>\n<span class=\"paragraph\">Ambas s\u00e3o subclasses de <code>box</code> e <strong>s\u00f3 acrescentam o modo de constru\u00e7\u00e3o</strong>: o c\u00e1lculo de que\nc\u00e9lulas pertencem ao grupo. A restri\u00e7\u00e3o em si continua a ser a do <code>box</code>.</span>\n<ul>\n<li><strong><code>cube(n, i, j)</code></strong> \u00e9 o bloco <marimo-tex class=\"arithmatex\">||(n \\times n||)</marimo-tex> com canto superior esquerdo em <marimo-tex class=\"arithmatex\">||((i \\cdot n,\\ j \\cdot n)||)</marimo-tex>,\n  com <marimo-tex class=\"arithmatex\">||(0 \\le i, j &lt; n||)</marimo-tex>. Rejeita \u00edndices de bloco fora do intervalo.</li>\n<li><strong><code>path(n, inicio, fim)</code></strong> \u00e9 o tro\u00e7o reto, horizontal ou vertical, entre duas coordenadas\n  inclusivas. Usa <code>min</code> e <code>max</code> para funcionar em qualquer sentido (<code>fim</code> antes ou depois de\n  <code>inicio</code>). Uma linha completa \u00e9 <code>path(n, (i, 0), (i, n\u00b2\u22121))</code> e uma coluna completa \u00e9\n  <code>path(n, (0, j), (n\u00b2\u22121, j))</code>. Rejeita tro\u00e7os em diagonal.</li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "SFPL",
+      "code_hash": "36e2bc3f43cb68f4ba5a609564ab5695",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "BYtC",
+      "code_hash": "b57e2cb492856cbd51e60246cbd9362d",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"r4-geracao-aleatoria-de-pistas\">R4 \u2014 Gera\u00e7\u00e3o aleat\u00f3ria de pistas</h2>\n<span class=\"paragraph\"><code>gerar_pistas_aleatorias(n, k)</code> devolve <strong>um <code>box</code></strong>, sem nenhuma classe nova: <marimo-tex class=\"arithmatex\">||(k||)</marimo-tex> posi\u00e7\u00f5es\ndistintas escolhidas ao acaso (<code>random.sample</code>, que n\u00e3o repete posi\u00e7\u00f5es), cada uma fixada a um\nvalor aleat\u00f3rio em <marimo-tex class=\"arithmatex\">||([1, n^2]||)</marimo-tex>. Por omiss\u00e3o <marimo-tex class=\"arithmatex\">||(k = n||)</marimo-tex> (3 pistas no <marimo-tex class=\"arithmatex\">||(9 \\times 9||)</marimo-tex>, 2 no <marimo-tex class=\"arithmatex\">||(4 \\times 4||)</marimo-tex>),\num valor pequeno que deixa quase sempre o puzzle possivel. Se <marimo-tex class=\"arithmatex\">||(k||)</marimo-tex> for maior do que o n\u00famero de\nc\u00e9lulas, \u00e9 limitado a <marimo-tex class=\"arithmatex\">||(n^4||)</marimo-tex>.</span>\n<span class=\"paragraph\">O par\u00e2metro opcional <code>rng</code> recebe um <code>random.Random</code> para tornar a gera\u00e7\u00e3o reprodut\u00edvel.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "RGSE",
+      "code_hash": "953998391561616912b91f9a2b1e4b2c",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "Kclp",
+      "code_hash": "6ddc71477b95fa8aa741e342479b085c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"estrutura-do-sudoku-linhas-colunas-e-blocos\">Estrutura do Sudoku: linhas, colunas e blocos</h2>\n<span class=\"paragraph\"><code>criar_grupos_sudoku(n)</code> constr\u00f3i os <marimo-tex class=\"arithmatex\">||(3 n^2||)</marimo-tex> grupos do Sudoku cl\u00e1ssico: <marimo-tex class=\"arithmatex\">||(n^2||)</marimo-tex> linhas, <marimo-tex class=\"arithmatex\">||(n^2||)</marimo-tex>\ncolunas e <marimo-tex class=\"arithmatex\">||(n^2||)</marimo-tex> blocos, todos como <code>path</code> ou <code>cube</code>. Esta fun\u00e7\u00e3o <strong>n\u00e3o conhece as pistas</strong>: elas\ns\u00e3o um grupo \u00e0 parte que o modelo recebe separadamente.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "emfo",
+      "code_hash": "86685a6db8fcc28f7f4196b3bf9bb771",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "Hstk",
+      "code_hash": "e137bef560ef659e346a812fe2c5ee1f",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"r5-modelo-csp\">R5 \u2014 Modelo CSP</h2>\n<span class=\"paragraph\"><strong>Vari\u00e1veis:</strong> uma vari\u00e1vel inteira por c\u00e9lula, com dom\u00ednio <marimo-tex class=\"arithmatex\">||([1, n^2]||)</marimo-tex>.</span>\n<span class=\"paragraph\"><strong>Restri\u00e7\u00f5es:</strong> v\u00eam todas dos grupos que o modelo recebe.</span>\n<ul>\n<li><code>add_group(grupo, todos_diferentes=True)</code> imp\u00f5e <code>AllDifferent</code> nas c\u00e9lulas do grupo (se\n  <code>todos_diferentes</code>) e fixa as que tenham valor atribu\u00eddo. \u00c9 o comportamento pedido em R5.</li>\n<li><code>add_groups(*grupos)</code> aceita <strong>um n\u00famero arbitr\u00e1rio de grupos</strong>, de qualquer tipo.</li>\n<li><code>add_clues(pistas)</code> \u00e9 o caso particular de um grupo de pistas: s\u00f3 fixa valores, sem impor que\n  sejam diferentes entre si (ver a justifica\u00e7\u00e3o na sec\u00e7\u00e3o de decis\u00f5es).</li>\n</ul>\n<span class=\"paragraph\"><strong>Resolu\u00e7\u00e3o:</strong> <code>solve()</code> devolve a grelha preenchida ou <code>None</code> se n\u00e3o houver solu\u00e7\u00e3o. O motivo\nfica em <code>estado</code> (<code>\"OPTIMAL\"</code>/<code>\"FEASIBLE\"</code>, <code>\"INFEASIBLE\"</code>, <code>\"UNKNOWN\"</code>\u2026), por isso \"sem\nsolu\u00e7\u00e3o\" \u00e9 distingu\u00edvel de \"o solver n\u00e3o chegou a uma conclus\u00e3o\" (por exemplo, por limite de\ntempo).</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "nWHF",
+      "code_hash": "6986be036532f57bc15f9f22dd36eb3a",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "iLit",
+      "code_hash": "b8f926e060653179bf860c02ed90dc30",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"r6-sudoku-completo\">R6 \u2014 Sudoku completo</h2>\n<span class=\"paragraph\"><code>resolver_sudoku(n, k, max_tentativas)</code> junta tudo:</span>\n<ol>\n<li>gera um grupo de pistas aleat\u00f3rias (R4);</li>\n<li>cria um modelo novo e entrega-lhe linhas, colunas e blocos (<code>add_groups</code>) e as pistas\n   (<code>add_clues</code>);</li>\n<li>resolve; se o puzzle for imposs\u00edvel, volta ao passo 1 at\u00e9 <code>max_tentativas</code>.</li>\n</ol>\n<span class=\"paragraph\">Devolve <code>(pistas, grupos, grelha, tentativas)</code>; <code>grelha</code> \u00e9 <code>None</code> se todas as tentativas falharem.\nComo cada tentativa cria um modelo novo, uma tentativa falhada n\u00e3o deixa restri\u00e7\u00f5es para tr\u00e1s.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ZHCJ",
+      "code_hash": "567a073d9d3a928f0d781ca2c779ad47",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "ROlb",
+      "code_hash": "33bca7e1d02b7d0302f6ce65b077b1cc",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"validacao-independente\">Valida\u00e7\u00e3o independente</h2>\n<span class=\"paragraph\"><code>validar_solucao(grelha, n, pistas)</code> verifica uma grelha <strong>sem usar <code>box</code>, <code>cube</code>, <code>path</code> nem o\nmodelo</strong>, para que o teste n\u00e3o seja circular (se a constru\u00e7\u00e3o dos grupos tivesse um erro, um\nvalidador que a reutilizasse repetiria o erro e passaria):</span>\n<ul>\n<li>a grelha tem dimens\u00e3o <marimo-tex class=\"arithmatex\">||(n^2 \\times n^2||)</marimo-tex>;</li>\n<li>cada linha, cada coluna e cada bloco, calculados com \u00edndices diretos, cont\u00e9m exatamente\n  <marimo-tex class=\"arithmatex\">||(1 \\ldots n^2||)</marimo-tex> (compara-se <code>sorted(...)</code> com <code>range</code>);</li>\n<li>cada pista mant\u00e9m o valor com que foi fixada, comparando diretamente com <code>pistas.cells</code>.</li>\n</ul>\n<span class=\"paragraph\">Devolve a <strong>lista de problemas</strong> encontrados (vazia se a grelha for v\u00e1lida), o que torna as falhas\nleg\u00edveis. <code>formatar_grelha</code> limita-se a imprimir a matriz em texto.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "qnkX",
+      "code_hash": "2136b88720970c12a1d0e4139d3a8b01",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "TqIu",
+      "code_hash": "1553345d95fcff9d7e791179c77685e6",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"testes\">Testes</h2>\n<span class=\"paragraph\">Cada linha abaixo \u00e9 uma verifica\u00e7\u00e3o autom\u00e1tica. Os testes cobrem:</span>\n<ul>\n<li><strong>R1</strong> \u2014 rejei\u00e7\u00e3o de coordenadas e valores inv\u00e1lidos, construtor com c\u00e9lulas iniciais, <code>as_matrix</code>;</li>\n<li><strong>R2 e R3</strong> \u2014 <code>cube</code> em v\u00e1rias posi\u00e7\u00f5es (e os 4 blocos de <marimo-tex class=\"arithmatex\">||(n=2||)</marimo-tex> a cobrirem a grelha sem sobreposi\u00e7\u00e3o),\n  <code>path</code> horizontal e vertical nos dois sentidos, e rejei\u00e7\u00e3o de argumentos inv\u00e1lidos;</li>\n<li><strong>R4</strong> \u2014 n\u00famero e distin\u00e7\u00e3o das pistas, dom\u00ednio dos valores, valor por omiss\u00e3o de <marimo-tex class=\"arithmatex\">||(k||)</marimo-tex> e reprodutibilidade;</li>\n<li><strong>R5</strong> \u2014 um puzzle <strong>imposs\u00edvel</strong> devolve <code>None</code> com estado <code>INFEASIBLE</code>, e a diferen\u00e7a entre\n  <code>add_clues</code> e <code>AllDifferent</code> nas pistas;</li>\n<li><strong>R6</strong> \u2014 fluxo completo para <marimo-tex class=\"arithmatex\">||(n = 2, 3, 4||)</marimo-tex>, validado de forma independente;</li>\n<li><strong>o pr\u00f3prio validador</strong> \u2014 apanha uma grelha estragada de prop\u00f3sito (um teste que nunca falha n\u00e3o prova nada).</li>\n</ul>\n<span class=\"paragraph\">Os testes que sorteiam usam <code>random.Random(semente)</code>, por isso d\u00e3o sempre o mesmo resultado.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Vxnm",
+      "code_hash": "f7ee847d8beea5fb8d16a063f3c51fba",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "DnEU",
+      "code_hash": "ad23bfbb5977c5055d6ed6e0d8892c8d",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"exemplos-de-execucao\">Exemplos de execu\u00e7\u00e3o</h2>\n<span class=\"paragraph\">Fluxo completo (pistas aleat\u00f3rias \u2192 linhas + colunas + blocos + pistas \u2192 resolver \u2192 validar) com\n<marimo-tex class=\"arithmatex\">||(n = 3||)</marimo-tex> (Sudoku cl\u00e1ssico <marimo-tex class=\"arithmatex\">||(9 \\times 9||)</marimo-tex>) e <marimo-tex class=\"arithmatex\">||(n = 2||)</marimo-tex> (<marimo-tex class=\"arithmatex\">||(4 \\times 4||)</marimo-tex>). Os valores variam a cada execu\u00e7\u00e3o\nporque aqui n\u00e3o fixamos a semente (nos testes fixamos); a linha \"problemas\" mostra o resultado\ndo validador independente.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ulZA",
+      "code_hash": "ae527101a34b55890cfd4e117c5d253b",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "ecfG",
+      "code_hash": "51def4de311f175133aa1780928adb1a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"escala-o-codigo-nao-esta-fixo-a-9-times-9\">Escala: o c\u00f3digo n\u00e3o est\u00e1 fixo a <marimo-tex class=\"arithmatex\">||(9 \\times 9||)</marimo-tex></h2>\n<span class=\"paragraph\">Nada no c\u00f3digo assume <marimo-tex class=\"arithmatex\">||(n = 3||)</marimo-tex>: o tamanho vem sempre de <code>n</code>. Para o confirmar, resolve-se o mesmo\nfluxo com <marimo-tex class=\"arithmatex\">||(n = 2, 3, 4||)</marimo-tex> e mede-se o tempo (inclui a gera\u00e7\u00e3o das pistas, a constru\u00e7\u00e3o do modelo e\ntodas as tentativas). Os tempos s\u00e3o de uma \u00fanica execu\u00e7\u00e3o e servem apenas de ordem de grandeza.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Pvdt",
+      "code_hash": "760bc38b27130e4cc64ad5b2328a864f",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "ZBYS",
+      "code_hash": "7b95e19c82c02d0565d9ebc7c56d6fad",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"conclusoes\">Conclus\u00f5es</h2>\n<ul>\n<li><strong>Uma s\u00f3 abstra\u00e7\u00e3o.</strong> Linhas, colunas, blocos e pistas s\u00e3o todos <code>box</code>. O modelo CSP recebe uma\n  lista de grupos e n\u00e3o distingue a sua origem, que \u00e9 o objetivo de R5 e R6.</li>\n<li><strong>Valida\u00e7\u00e3o sem circularidade.</strong> O validador recalcula linhas, colunas e blocos por \u00edndices e\n  compara as pistas com o <code>box</code> original, sem reutilizar <code>path</code>, <code>cube</code> nem o modelo, e os testes\n  mostram que ele apanha grelhas estragadas.</li>\n<li><strong>Casos limite tratados.</strong> Argumentos inv\u00e1lidos s\u00e3o rejeitados, puzzles imposs\u00edveis s\u00e3o\n  sinalizados (<code>None</code> + <code>estado</code>) e a procura de pistas resol\u00faveis tem um limite de tentativas.</li>\n<li><strong>Pistas sem <code>AllDifferent</code>.</strong> A decis\u00e3o mais subtil do modelo: um grupo de pistas fixa valores\n  mas n\u00e3o os obriga a ser diferentes, porque n\u00e3o formam uma regi\u00e3o do Sudoku.</li>\n<li><strong>Limita\u00e7\u00f5es.</strong> As pistas aleat\u00f3rias n\u00e3o garantem solu\u00e7\u00e3o <strong>\u00fanica</strong>: o resultado \u00e9 uma solu\u00e7\u00e3o\n  poss\u00edvel, n\u00e3o <em>a</em> solu\u00e7\u00e3o.</li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "aLJB",
+      "code_hash": "ea39ff2380a6d8bc7477a7738e7c2981",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"uso-de-ia\">Uso de IA</h2>\n<table>\n<thead>\n<tr>\n<th>Pergunta</th>\n<th>Resposta</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Que ferramentas de IA foram usadas (nome e vers\u00e3o/modelo)?</td>\n<td><em>Usou se o Github Copilot e ChatGPT.</em></td>\n</tr>\n<tr>\n<td>Em que partes do trabalho (modela\u00e7\u00e3o, c\u00f3digo, testes, texto do relat\u00f3rio, revis\u00e3o)?</td>\n<td><em>O Github Copilot foi usado para gerar texto do relat\u00f3rio e alguma sugestoes para resolu\u00e7\u00e3o de problemas. O ChatGPT ajudou na estrutura do codigo (FileTree, bibliotecas usadas, organiza\u00e7ao das fun\u00e7oes.</em></td>\n</tr>\n<tr>\n<td>Que <em>prompts</em> ou pedidos principais foram feitos?</td>\n<td><em>Solicita\u00e7\u00f5es para gerar c\u00f3digo, sugest\u00f5es de otimiza\u00e7\u00e3o e melhorias. Em si, nao foram prompts espec\u00edficos mas outputs de bugs ou sugestoes diretas do modelo de IA.</em></td>\n</tr>\n<tr>\n<td>Como verific\u00e1mos que o resultado estava correto (testes, leitura do c\u00f3digo, execu\u00e7\u00e3o)?</td>\n<td><em>Verifica\u00e7\u00f5es realizadas manualmente durante o desenvolvimento.</em></td>\n</tr>\n<tr>\n<td>Que partes do trabalho foram feitas sem IA?</td>\n<td><em>Em geral, o codigo e a logica por tras foi feita manualmente pelos dois elementos do grupo.</em></td>\n</tr>\n</tbody>\n</table>\n<span class=\"paragraph\"><strong>Declara\u00e7\u00e3o de responsabilidade:</strong> <em>Nos, Luis Martins e Lucas Ferreira, assumimos a responsabilidade por todo o conte\u00fado deste notebook. Consideramos que o uso da IA foi \u00e9tico e respeitou os princ\u00edpios de integridade acad\u00e9mica.</em></span></span>"
+          }
+        }
+      ],
+      "console": []
+    }
+  ]
+}

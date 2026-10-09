@@ -1,0 +1,17 @@
+sala,tipo,quantidade
+Sala Normal,normal,18
+Sala Normal 2,normal,1
+Sala Normal 3,normal,1
+Sala Normal 4,normal,1
+Sala Normal 5,normal,1
+Sala Normal 6,normal,1
+Sala Normal 7,normal,1
+Sala Normal 8,normal,1
+Sala Normal 9,normal,1
+Sala Normal 10,normal,1
+Laboratório,especial,2
+Ginásio,especial,1
+Sala TIC,especial,2
+Sala EV,especial,1
+Sala Música,especial,1
+Sala Teatro,especial,1
